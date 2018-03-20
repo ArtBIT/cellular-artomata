@@ -63,7 +63,8 @@ class BrushRender {
       return;
     }
     let c = brush.color;
-    ctx.strokeStyle = "rgba(" + c.join() + ", 0.5)";
+    ctx.strokeStyle =
+      "rgba(" + c.join() + ", " + (options.opacity || 0.5) + ")";
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(brush.position.x, brush.position.y);
@@ -78,7 +79,7 @@ class BrushRender {
       return;
     }
     let c = brush.color;
-    ctx.fillStyle = "rgba(" + c.join() + ", 0.5)";
+    ctx.fillStyle = "rgba(" + c.join() + ", " + (options.opacity || 0.5) + ")";
     ctx.beginPath();
     ctx.arc(
       brush.position.x,
@@ -112,6 +113,7 @@ class BrushMove {
     let incAngle = turnAngle / sampleSize;
     let didMove = false;
     brush.isPressed = false;
+    let validCoords = [];
     for (let a = angle; a < maxAngle; a += incAngle) {
       let x = brush.position.x + Math.round(radius * Math.cos(a));
       let y = brush.position.y + Math.round(radius * Math.sin(a));
@@ -122,12 +124,17 @@ class BrushMove {
       let pixel = field.pixels[x][y];
       let isVisited = pixel[1];
       if (!isVisited && pixel[0] === index) {
-        brush.velocity.x = x - brush.position.x;
-        brush.velocity.y = y - brush.position.y;
-        field.pixels[x][y][1] = true;
-        brush.isPressed = true;
-        break;
+        validCoords.push({ x, y });
       }
+    }
+    if (validCoords.length) {
+      let px = validCoords[Math.floor(validCoords.length * Math.random())];
+      brush.velocity.x = px.x - brush.position.x;
+      brush.velocity.y = px.y - brush.position.y;
+      field.pixels[px.x][px.y][1] = true;
+      brush.isPressed = true;
+    } else {
+      brush.isPressed = false;
     }
     let px = brush.position.x + brush.velocity.x;
     let py = brush.position.y + brush.velocity.y;
@@ -142,19 +149,26 @@ class BrushMove {
 }
 
 export class CanvasArtomata {
-  constructor(canvas, { maxColors, maxVelocity, renderOptions, moveOptions }) {
+  constructor(
+    canvas,
+    { maxColors, maxVelocity, minVelocity, renderOptions, moveOptions }
+  ) {
     canvas = canvas.node || canvas;
+    posterizeCanvas(canvas, { maxColors });
     this.palette = new Palette(canvas, { maxColors });
     this.field = new CanvasPalettePixels(canvas, this.palette);
     let colors = this.palette.getColors();
     maxVelocity = maxVelocity || 5;
+    minVelocity = minVelocity || 3;
     this.brushes = colors.map(rgb => {
       let brush = new VelocityBrush(rgb);
       brush.position.x = (Math.random() * canvas.width) | 0;
       brush.position.y = (Math.random() * canvas.height) | 0;
 
-      brush.velocity.x = (Math.random() * maxVelocity) | 0;
-      brush.velocity.y = (Math.random() * maxVelocity) | 0;
+      brush.velocity.x =
+        (Math.random() * (maxVelocity - minVelocity) + minVelocity) | 0;
+      brush.velocity.y =
+        (Math.random() * (maxVelocity - minVelocity) + minVelocity) | 0;
       return brush;
     });
     this.renderBrush = BrushRender.FACTORY(renderOptions);
@@ -164,6 +178,34 @@ export class CanvasArtomata {
     this.brushes.forEach(this.moveBrush);
   }
   render(ctx) {
-    this.brushes.forEach(this.renderBrush(ctx));
+    const renderBrush = this.renderBrush(ctx);
+    const rectSize = 20;
+    this.brushes.forEach((brush, index) => {
+      renderBrush(brush, index);
+
+      ctx.fillStyle = rgbToHex(brush.color);
+      ctx.fillRect(index * rectSize, 0, rectSize, rectSize);
+    });
   }
+}
+
+export function posterizeCanvas(canvas, { maxColors }) {
+  canvas = canvas.node || canvas;
+  let palette = new Palette(canvas, { maxColors });
+  let w = canvas.width;
+  let h = canvas.height;
+  let ctx = canvas.getContext("2d");
+  let imageData = ctx.getImageData(0, 0, w, h);
+  let rgb;
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    rgb = palette.map([
+      imageData.data[i + 0],
+      imageData.data[i + 1],
+      imageData.data[i + 2]
+    ]);
+    imageData.data[i + 0] = rgb[0];
+    imageData.data[i + 1] = rgb[1];
+    imageData.data[i + 2] = rgb[2];
+  }
+  ctx.putImageData(imageData, 0, 0);
 }

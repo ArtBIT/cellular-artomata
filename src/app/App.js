@@ -3,7 +3,7 @@ import { Canvas } from "./Canvas";
 import { Dropzone } from "./Dropzone";
 import { Engine } from "./Engine";
 import { Logger } from "./Logger";
-import { CanvasArtomata } from "./CanvasArtomata";
+import { CanvasArtomata, posterizeCanvas } from "./CanvasArtomata";
 import { Rect, rgbToHex } from "../lib/gfx";
 
 export class App {
@@ -52,28 +52,15 @@ export class App {
     });
     this.canvas.render(img, "scale");
     this.artomata = new CanvasArtomata(this.canvas, {
-      maxColors: 16,
+      maxColors: 8,
       maxVelocity: 10,
+      minVelocity: 5,
+      turnAngle: Math.PI,
       renderOptions: {
         type: "circle",
-        radius: 10
+        radius: 10,
+        opacity: 0.4
       }
     });
-    this.drawPalette(
-      this.artomata.palette.getColors(),
-      this.canvas.ctx,
-      0,
-      0,
-      20
-    );
   };
-  drawPalette(palette, ctx, x, y, rectSize) {
-    ctx.save();
-    ctx.translate(x, y);
-    for (var i = 0, len = palette.length; i < len; i++) {
-      ctx.fillStyle = rgbToHex(palette[i]);
-      ctx.fillRect(i * rectSize, 0, rectSize, rectSize);
-    }
-    ctx.restore();
-  }
 }
