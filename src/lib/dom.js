@@ -1,3 +1,7 @@
+export function createStyle(cssString) {
+  var style = dom.create("style", { type: "text/css", innerHTML: cssString });
+  document.getElementsByTagName("head")[0].appendChild(style);
+}
 export function style(selector, css) {
   const elem = get(selector);
   Object.keys(css).forEach(key => (elem.style[key] = css[key]));

@@ -4,21 +4,23 @@ export class Dropzone {
   constructor({ parent, ...options }) {
     this.options = options || {};
 
+    dom.createStyle(`
+    .dropzone {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 0;
+        background: #333;
+        z-index: 100;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }`);
     this.node = dom.create("div", {
       innerHTML: "<h2>Drop Image Here</h2>",
-      style: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        top: 0,
-        background: "#333",
-        zIndex: 100,
-        textAlign: "center",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center"
-      }
+      class: "dropzone"
     });
     parent && this.appendTo(parent);
     this.bindEvents();
@@ -71,7 +73,7 @@ export class Dropzone {
     window.removeEventListener("dragenter", this.onWindowDragEnter);
   }
   show() {
-    dom.style(this.node, { display: "auto" });
+    dom.style(this.node, { display: null });
   }
   hide() {
     dom.style(this.node, { display: "none" });
